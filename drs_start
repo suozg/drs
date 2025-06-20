@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Путь к файлу Python скрипта
+python_script="$HOME/drs/drs_wx.py"
+
+# Путь к  DB
+directory="$HOME/Documents/db.db"
+
+# Проверяем наличие файла
+if [ -f "$directory" ]; then
+    source $HOME/venv/bin/activate
+    # Запускаем скрипт на Python
+    python "$python_script" -c "$directory"
+else
+    echo "Файл $directory не найден."
+    #notify-send "Файл $python_script не найден в директории $directory."
+fi

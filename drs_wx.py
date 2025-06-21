@@ -99,25 +99,21 @@ def get_document_date(filename, root_path):
 # --- Власне діалогове вікно для введення пароля ---
 class PasswordDialog(wx.Dialog):
     def __init__(self, parent, message, title):
-        super(PasswordDialog, self).__init__(parent, title=title, size=(350, 220))
+        super(PasswordDialog, self).__init__(parent, title=title) # Убираем фиксированный размер
 
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # Повідомлення для користувача
-        msg_label = wx.StaticText(panel, label=message)
-        sizer.Add(msg_label, 0, wx.ALL | wx.EXPAND, 10)
-
-        # Поле для введення пароля
+        # Поле для ввода пароля
         self.password_entry = wx.TextCtrl(panel, style=wx.TE_PASSWORD | wx.TE_PROCESS_ENTER)
-        sizer.Add(self.password_entry, 1, wx.ALL | wx.EXPAND, 10)
-        self.password_entry.Bind(wx.EVT_TEXT_ENTER, self.on_ok_button) # Прив'язуємо Enter до кнопки ОК
+        sizer.Add(self.password_entry, 0, wx.ALL | wx.EXPAND, 10)
+        self.password_entry.Bind(wx.EVT_TEXT_ENTER, self.on_ok_button)
 
-        # Кнопки ОК та Скасувати
+        # Кнопки ОК и Отмена
         button_sizer = wx.StdDialogButtonSizer()
 
         ok_button = wx.Button(panel, wx.ID_OK, "ОК")
-        ok_button.SetDefault() # Зробити кнопку ОК стандартною (натискається по Enter за замовчуванням)
+        ok_button.SetDefault()
         button_sizer.AddButton(ok_button)
         self.Bind(wx.EVT_BUTTON, self.on_ok_button, id=wx.ID_OK)
 
@@ -126,18 +122,18 @@ class PasswordDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.on_cancel_button, id=wx.ID_CANCEL)
 
         button_sizer.Realize()
-        sizer.Add(button_sizer, 0, wx.ALL | wx.ALIGN_RIGHT, 10)
+        sizer.Add(button_sizer, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 10)
 
         panel.SetSizer(sizer)
+        sizer.Fit(self) 
         self.Centre()
-        self.password_entry.SetFocus() # Встановлюємо фокус на поле введення
+        self.password_entry.SetFocus()
 
     def on_ok_button(self, event):
-        # Закриваємо діалог з результатом ID_OK
+        # Здесь будет логика обработки пароля
         self.EndModal(wx.ID_OK)
 
     def on_cancel_button(self, event):
-        # Закриваємо діалог з результатом ID_CANCEL
         self.EndModal(wx.ID_CANCEL)
 
     def GetValue(self):
@@ -287,7 +283,7 @@ def extract_text_libreoffice(filepath):
 
 class DocumentSearchFrame(wx.Frame):
     def __init__(self, parent, title):
-        super(DocumentSearchFrame, self).__init__(parent, title=title, size=(1050, 650))
+        super(DocumentSearchFrame, self).__init__(parent, title=title, size=(800, 640))
 
         self.db_info = {
             "records": 0,
@@ -370,7 +366,7 @@ class DocumentSearchFrame(wx.Frame):
 
     def prompt_for_password(self):
         global password
-        dlg = PasswordDialog(self, "Введіть пароль для бази даних:", "Пароль")
+        dlg = PasswordDialog(self, "Введіть пароль", "Пароль")
         result = dlg.ShowModal()
         if result == wx.ID_OK:
             input_password = dlg.GetValue().strip()
@@ -401,18 +397,21 @@ class DocumentSearchFrame(wx.Frame):
         query_date_panel.SetSizer(query_date_sizer)
 
         query_date_sizer.Add(wx.StaticText(query_date_panel, label="Запит:"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
-        self.search_entry = wx.TextCtrl(query_date_panel, size=(200, -1), style=wx.TE_PROCESS_ENTER)
+        self.search_entry = wx.TextCtrl(query_date_panel, size=(150, -1), style=wx.TE_PROCESS_ENTER)
         query_date_sizer.Add(self.search_entry, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
         self.search_entry.Bind(wx.EVT_TEXT_ENTER, self.on_search_documents)
 
-        self.count_label = wx.StaticText(query_date_panel, label="")
-        query_date_sizer.Add(self.count_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
+        query_date_sizer.Add(wx.StaticText(query_date_panel, label="∨"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
 
-        query_date_sizer.Add(wx.StaticText(query_date_panel, label="Початкова дата:"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
+        self.show_all_but = wx.Button(query_date_panel, label=" ∞ ", size=(40, -1))
+        self.show_all_but.Bind(wx.EVT_BUTTON, self.show_all_docs) 
+        query_date_sizer.Add(self.show_all_but, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
+
+        query_date_sizer.Add(wx.StaticText(query_date_panel, label="Період"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
         self.start_date_entry = wx_adv.DatePickerCtrl(query_date_panel, style=wx_adv.DP_DROPDOWN | wx_adv.DP_SHOWCENTURY)
         query_date_sizer.Add(self.start_date_entry, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
 
-        query_date_sizer.Add(wx.StaticText(query_date_panel, label="Кінцева дата:"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
+        query_date_sizer.Add(wx.StaticText(query_date_panel, label="-"), 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
         self.end_date_entry = wx_adv.DatePickerCtrl(query_date_panel, style=wx_adv.DP_DROPDOWN | wx_adv.DP_SHOWCENTURY)
         query_date_sizer.Add(self.end_date_entry, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 5)
 
@@ -424,7 +423,7 @@ class DocumentSearchFrame(wx.Frame):
         query_date_sizer.Add(self.search_progress_bar, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
         query_date_sizer.Hide(self.search_progress_bar)
 
-        self.delete_button = wx.Button(query_date_panel, label="Видалити файл")
+        self.delete_button = wx.Button(query_date_panel, label=" Видалити ")
         self.delete_button.Bind(wx.EVT_BUTTON, self.on_delete_selected_file)
         query_date_sizer.Add(self.delete_button, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
 
@@ -432,7 +431,20 @@ class DocumentSearchFrame(wx.Frame):
         query_date_sizer.Add(self.delete_progress_bar, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 5)
         query_date_sizer.Hide(self.delete_progress_bar)
 
-        search_sizer.Add(query_date_panel, 0, wx.EXPAND | wx.ALL, 10)
+        search_sizer.Add(query_date_panel, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.default_text_count_label = "(введіть запит, натисніть ↲, кнопка [∞] просто покаже усі підряд документи)"
+        self.count_label = wx.StaticText(self.tab1, label=self.default_text_count_label)
+        default_font = self.count_label.GetFont()
+        # Створюємо новий шрифт, зменшуючи його розмір на 2-4 пункти
+        smaller_font_size = default_font.GetPointSize() - 2 # Зменшуємо на 2 пункти
+        if smaller_font_size < 8: # Мінімальний розумний розмір шрифту
+            smaller_font_size = 8
+        smaller_font = wx.Font(smaller_font_size, default_font.GetFamily(),
+                default_font.GetStyle(), default_font.GetWeight(),
+                default_font.GetUnderlined(), default_font.GetFaceName())
+        self.count_label.SetFont(smaller_font)
+        search_sizer.Add(self.count_label, 0, wx.LEFT | wx.RIGHT, 10) 
 
         content_panel = wx.Panel(self.tab1)
         content_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -477,7 +489,7 @@ class DocumentSearchFrame(wx.Frame):
 
         content_sizer.Add(text_display_panel, 1, wx.EXPAND | wx.ALL, 5)
 
-        search_sizer.Add(content_panel, 1, wx.EXPAND | wx.ALL, 10)
+        search_sizer.Add(content_panel, 1, wx.EXPAND | wx.ALL, 5)
 
         self.tab1.SetSizer(search_sizer)
         query_date_panel.Layout()
@@ -528,10 +540,35 @@ class DocumentSearchFrame(wx.Frame):
         queries = re.sub(r'(\d{2})\.(\d{2})\.(\d{2,4})', r'\1 NEAR/0 \2 NEAR/0 \3', queries)
         return queries
 
+    def show_all_docs(self, event):
+        wx.CallAfter(self.search_output_listbox.Clear)
+        self.count_label.SetLabel(self.default_text_count_label)
+        query = ""  # Пустой запрос для отключения текстового поиска
+
+        formatted_query = self.format_date_for_fts3(query)
+
+        self.search_button.GetContainingSizer().Hide(self.search_button, recursive=True)
+        self.search_button.GetContainingSizer().Show(self.search_progress_bar, recursive=True)
+        self.search_button.GetParent().Layout()
+
+        stop_pulsing_search = threading.Event()
+        pulse_thread_search = threading.Thread(
+            target=self._pulse_gauge_loop,
+            args=(self.search_progress_bar, stop_pulsing_search)
+        )
+        pulse_thread_search.start()
+
+        threading.Thread(
+            target=self.perform_search,
+            args=(password, formatted_query, query, stop_pulsing_search, pulse_thread_search)
+        ).start()
+
     def on_search_documents(self, event):
+        self.search_output_listbox.Clear()
+        self.count_label.SetLabel(self.default_text_count_label)
+
         query = self.search_entry.GetValue()
         if not query:
-            self.search_output_listbox.Clear()
             self.search_output_listbox.Append("Введіть запит для пошуку.")
             return
 
@@ -585,6 +622,24 @@ class DocumentSearchFrame(wx.Frame):
             wx.CallAfter(self.search_button.GetParent().Layout)
             return
 
+        # Если нет запроса и выбран весь период больше 10 лет => слишком много данных
+        if original_query == "":
+            start_year = start_date_num // 10000
+            end_year = end_date_num // 10000
+            if start_date_num == end_date_num or ((end_year - start_year) > 10):
+                # Автоматически ограничиваем стартовую дату
+                end_date_str = str(end_date_num)
+                end_date = datetime.strptime(end_date_str, "%Y%m%d")
+                ten_years_ago = end_date.replace(year=end_date.year - 10)
+                start_date_num = int(ten_years_ago.strftime("%Y%m%d"))
+
+                wx.CallAfter(self.search_output_listbox.Clear)
+                wx.CallAfter(self.search_output_listbox.Append, "Період обмежено 10 роками")
+                self.start_date_entry.SetValue(wx.DateTime.FromDMY(
+                    ten_years_ago.day, ten_years_ago.month - 1, ten_years_ago.year
+                ))
+
+ 
         conn = None
         results = []
         try:
@@ -599,28 +654,38 @@ class DocumentSearchFrame(wx.Frame):
 
             cursor = conn.cursor()
 
-            # Базовый SQL-запрос с JOIN между documents и documents_fts
-            # Мы ищем по content MATCH в documents_fts, а затем JOINимся с documents
-            # по их ID/docid для получения всех необходимых столбцов.
-            if start_date_num == end_date_num:
+            if original_query == "":
+                # Без поиска по тексту 
                 sql_query = """
-                SELECT d.filename, d.content, d.created_at
-                FROM documents AS d
-                JOIN documents_fts AS fts ON d.id = fts.docid
-                WHERE fts.content MATCH ?
-                ORDER BY d.year DESC, d.month DESC, d.day DESC
+                    SELECT filename, content, created_at
+                    FROM documents
+                    WHERE year * 10000 + month * 100 + day BETWEEN ? AND ?
+                    ORDER BY year DESC, month DESC, day DESC
                 """
-                params = (formatted_query,)
+                params = (start_date_num, end_date_num)
             else:
-                sql_query = """
-                SELECT d.filename, d.content, d.created_at
-                FROM documents AS d
-                JOIN documents_fts AS fts ON d.id = fts.docid
-                WHERE fts.content MATCH ?
-                AND (d.year * 10000 + d.month * 100 + d.day BETWEEN ? AND ?)
-                ORDER BY d.year DESC, d.month DESC, d.day DESC
-                """
-                params = (formatted_query, start_date_num, end_date_num)
+                # SQL-запрос с JOIN между documents и documents_fts
+                # Мы ищем по content MATCH в documents_fts, а затем JOINимся с documents
+                # по их ID/docid для получения всех необходимых столбцов.
+                if start_date_num == end_date_num:
+                    sql_query = """
+                    SELECT d.filename, d.content, d.created_at
+                    FROM documents AS d
+                    JOIN documents_fts AS fts ON d.id = fts.docid
+                    WHERE fts.content MATCH ?
+                    ORDER BY d.year DESC, d.month DESC, d.day DESC
+                    """
+                    params = (formatted_query,)
+                else:                                    
+                    sql_query = """
+                    SELECT d.filename, d.content, d.created_at
+                    FROM documents AS d
+                    JOIN documents_fts AS fts ON d.id = fts.docid
+                    WHERE fts.content MATCH ?
+                    AND (d.year * 10000 + d.month * 100 + d.day BETWEEN ? AND ?)
+                    ORDER BY d.year DESC, d.month DESC, d.day DESC
+                    """
+                    params = (formatted_query, start_date_num, end_date_num)
 
             cursor.execute(sql_query, params)
             results = cursor.fetchall()
@@ -750,7 +815,7 @@ class DocumentSearchFrame(wx.Frame):
 
     def update_count_label(self, count):
         if count > 0:
-            self.count_label.SetLabel(f"Записів: {count}")
+            self.count_label.SetLabel(f"Знайдено записів: {count}")
             self.count_label.Show()
         else:
             self.count_label.SetLabel("")
@@ -914,7 +979,7 @@ class DocumentSearchFrame(wx.Frame):
         full_path, full_absolute_path = _get_full_db_patch(db_path)
 
         long_help_text = (
-            f"\n{frame_title}\n\n(c)2025. Холодов О.В. Ліцензія GPL v.2\n\n"
+            f"\n{frame_title}\n\n(c) 2025. Холодов О.В. Ліцензія GPL v.2\n\n"
             f"\n{frame_title} оброблює текстові файли (щоденні звіти, накази) у визначеному каталозі "
             "та виконує пошук текстів за параметрами. \n"
             "\nОчікується дата (ДД.ММ.РРРР) в назві файла, а також групування файлів в каталогах по-місячно та по роках.\n"

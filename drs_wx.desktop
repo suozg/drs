@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=AwardStart
+Comment=Запуск скрипта DRX_WX
+Exec=bash -c "bash /home/alex320388/awards/scripts/nn_start"
+Icon=/home/alex320388/awards/homer.png
+Terminal=false
+Type=Application
+Categories=Utility;
+

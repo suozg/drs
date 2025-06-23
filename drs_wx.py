@@ -567,8 +567,8 @@ class DocumentSearchFrame(wx.Frame):
         self.search_output_listbox.Clear()
         self.count_label.SetLabel(self.default_text_count_label)
 
-        query = self.search_entry.GetValue()
-        if not query:
+        query = self.search_entry.GetValue().strip()
+        if not query or query == "*" or len(query) < 4:
             self.search_output_listbox.Append("Введіть запит для пошуку.")
             return
 

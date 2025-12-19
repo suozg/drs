@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import hashlib
 import pysqlcipher3.dbapi2 as sqlite
 from docx import Document
 import subprocess
@@ -21,7 +22,7 @@ db_path = "db.db"
 # Ищет "1.1.15", "01.01.15", "1.1.2015", "01.01.2015", с опциональным "від "
 filename_date_pattern = re.compile(r'(?:від\s?)?(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})')
 
-# Регулярное выражение для извлечения номера документа (после "№" или первого числа)
+# Регулярное выражение для извлечения номера документа (после "№" или первое число)
 # Ищет последовательность цифр, которая может быть номером документа
 document_number_pattern = re.compile(r'(?:№|\s|^)(\d+)') # Ищет число после "№", пробела или в начале строки
 
@@ -100,7 +101,6 @@ def get_document_date(filename, root_path):
 class PasswordDialog(wx.Dialog):
     def __init__(self, parent, message, title):
         super(PasswordDialog, self).__init__(parent, title=title) # Убираем фиксированный размер
-
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -129,11 +129,11 @@ class PasswordDialog(wx.Dialog):
         self.Centre()
         self.password_entry.SetFocus()
 
-    def on_ok_button(self, event):
+    def on_ok_button(self, _event):
         # Здесь будет логика обработки пароля
         self.EndModal(wx.ID_OK)
 
-    def on_cancel_button(self, event):
+    def on_cancel_button(self, _event):
         self.EndModal(wx.ID_CANCEL)
 
     def GetValue(self):
@@ -199,7 +199,8 @@ def connect_to_database(db_password):
                 day INTEGER,
                 content TEXT,
                 document_number TEXT,
-                created_at TEXT
+                created_at TEXT,
+                content_hash TEXT
             );
             """)
 
@@ -235,7 +236,16 @@ def connect_to_database(db_password):
             """)
             conn.commit()
         else:
-            pass
+            # --- БЛОК ОНОВЛЕННЯ ІСНУЮЧОЇ БАЗИ ---
+            # Якщо база вже є, нам треба перевірити, чи є в ній колонка content_hash
+            try:
+                # Спробуємо додати колонку. Якщо вона вже є — SQLite викине помилку.
+                cursor.execute("ALTER TABLE documents ADD COLUMN content_hash TEXT;")
+                conn.commit()
+                print("Колонка content_hash додана до існуючої бази.")
+            except Exception:
+                # Якщо помилка (наприклад, колонка вже існує), просто йдемо далі
+                pass           
 
         return conn
 
@@ -381,7 +391,7 @@ class DocumentSearchFrame(wx.Frame):
                 # Запускаємо оновлення інформації про БД в окремому потоці
                 threading.Thread(target=self.update_db_info).start()
             else:
-                wx.MessageBox("Невірний пароль або помилка бази даних. Програма закриється.", "Помилка підключення", wx.OK | wx.ICON_ERROR)
+                wx.MessageBox("Невірний пароль або помилка бази даних.", "Помилка підключення", wx.OK | wx.ICON_ERROR)
                 self.Close()
         else:
             self.Close()
@@ -493,6 +503,7 @@ class DocumentSearchFrame(wx.Frame):
 
         self.tab1.SetSizer(search_sizer)
         query_date_panel.Layout()
+
 
     def ShowHowTo(self):
         """Відображає інструкції щодо синтаксису пошуку."""
@@ -1154,18 +1165,48 @@ class DocumentSearchFrame(wx.Frame):
                 created_timestamp = os.path.getctime(filepath)
                 created_datetime = datetime.fromtimestamp(created_timestamp)
                 created_at_str = created_datetime.strftime('%Y-%m-%d %H:%M:%S')
+                # --- створюємо hash для файлу
+                text_hash = hashlib.md5(content.encode('utf-8')).hexdigest()
+                
+                # --- Перевірка наявності та вставка/оновлення (сумісно зі старими версіями) ---
+                # 1. Шукаємо, чи є вже файл з такою назвою та отримуємо його хеш
+                cursor.execute("SELECT content_hash FROM documents WHERE filename = ?", (filename,))
+                existing_record = cursor.fetchone()
 
-                # --- Вставка або ігнорування запису в БД ---
-                cursor.execute("""
-                INSERT OR IGNORE INTO documents (filename, year, month, day, content, document_number, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (filename, doc_year, doc_month, doc_day, content, document_number, created_at_str))
+                was_updated_or_added = False
 
-                if cursor.lastrowid != 0:
-                    new_records += 1
-                    wx.CallAfter(self.output_text.AppendText, f"Додано: {filename} (Дата: {doc_year}-{doc_month:02d}-{doc_day:02d}, Номер: {document_number if document_number is not None else 'N/A'})\n")
+                if existing_record:
+                    existing_hash = existing_record[0]
+                    # 2. Якщо файл є, порівнюємо хеш вмісту
+                    if existing_hash != text_hash:
+                        # Якщо existing_hash це None, значить ми вперше бачимо цей файл у новій системі
+                        status_msg = "Оновлено вміст" if existing_hash else "Оновлено хеш (старий запис)"                       # Хеш інший — значить файл оновився
+                        cursor.execute("""
+                        UPDATE documents SET 
+                            year = ?, month = ?, day = ?, content = ?, 
+                            document_number = ?, created_at = ?, content_hash = ?
+                        WHERE filename = ?
+                        """, (doc_year, doc_month, doc_day, content, document_number, created_at_str, text_hash, filename))
+                        
+                        was_updated_or_added = True
+                        wx.CallAfter(self.output_text.AppendText, f"Оновлено: {filename} (новий вміст)\n")
+                    else:
+                        # Хеш однаковий — нічого не робимо
+                        wx.CallAfter(self.output_text.AppendText, f"Пропуск: {filename} (вже в базі без змін)\n")
                 else:
-                    wx.CallAfter(self.output_text.AppendText, f"Пропуск: {filename} (вже в базі)\n")
+                    # 3. Файлу взагалі немає в базі — додаємо як новий
+                    cursor.execute("""
+                    INSERT INTO documents (filename, year, month, day, content, document_number, created_at, content_hash)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (filename, doc_year, doc_month, doc_day, content, document_number, created_at_str, text_hash))
+                    
+                    was_updated_or_added = True
+                    wx.CallAfter(self.output_text.AppendText, f"Додано: {filename}\n")
+
+                # Оновлюємо лічильники
+                if was_updated_or_added:
+                    new_records += 1
+                else:
                     skipped_files += 1
 
                 processed_files += 1

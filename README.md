@@ -38,8 +38,8 @@ Install required packages
 
     4.1 Test Run:
    
-        python main.py
+        python drs_wx.py
 
     4.2 If the application starts successfully, use PyInstaller to build the .exe file using your spec file:
    
-        pyinstaller main.spec
+        pyinstaller drs_wx.spec

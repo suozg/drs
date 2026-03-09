@@ -312,45 +312,54 @@ class DocumentSearchFrame(wx.Frame):
 
         # Запит пароля при запуску
         self.prompt_for_password()
-
+    
     def InitUI(self):
         panel = wx.Panel(self)
+        
+        # 1. Головний сайзер (вертикальний)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        # 2. Створюємо Notebook (він тепер буде першим, щоб займати основне місце)
         self.notebook = wx.Notebook(panel)
+        main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)
+        
+        # 3. Створюємо компактний "footer" для назви бази (внизу)
+        footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.file_label = wx.StaticText(panel, label="Вибрано файл бази: " + db_path)
+        
+        # Робимо шрифт меншим для економії місця
+        font = self.file_label.GetFont()
+        font.SetPointSize(8) 
+        self.file_label.SetFont(font)
+        
+        # Додаємо з мінімальними відступами
+        footer_sizer.Add(self.file_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.BOTTOM, 2)
+        
+        # Додаємо footer_sizer до головного сайзера (він буде під Notebook)
+        main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.LEFT, 5)
+        
+        panel.SetSizer(main_sizer)
 
-        # Вкладки
-        self.tab1 = wx.Panel(self.notebook) # Пошук
-        self.tab2 = wx.Panel(self.notebook) # Імпорт
-        self.tab3 = wx.Panel(self.notebook) # Пароль
-        self.tab4 = wx.Panel(self.notebook) # Довідка
+        # --- Вкладки ---
+        self.tab1 = wx.Panel(self.notebook)
+        self.tab2 = wx.Panel(self.notebook)
+        self.tab3 = wx.Panel(self.notebook)
+        self.tab4 = wx.Panel(self.notebook)
 
         self.notebook.AddPage(self.tab1, "Пошук")
         self.notebook.AddPage(self.tab2, "Імпорт")
         self.notebook.AddPage(self.tab3, "Пароль")
         self.notebook.AddPage(self.tab4, "Про")
 
-        # Сайзер для основної панелі
-        main_sizer = wx.BoxSizer(wx.VERTICAL)
-        main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)
-        panel.SetSizer(main_sizer)
-
-        # --- Вкладка 1: Пошук ---
+        # --- Далі ваш код налаштування ---
         self.setup_search_tab()
-
-        # --- Вкладка 2: Імпорт ---
         self.setup_import_tab()
-
-        # --- Вкладка 3: Пароль ---
         self.setup_password_tab()
+        self.help_tab()        
 
-        # --- Вкладка 4: Довідка ---
-        self.help_tab()       
+        self.ShowHowTo() 
 
-        self.ShowHowTo() # Відображення інструкцій при запуску в текстовій області пошуку
-
-        # Прив'язуємо подію зміни вкладки
-        # *після* зміни вкладки
         self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_page_changed)
-        #  *перед* зміною вкладки
         self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.on_notebook_page_changing)
 
     def on_page_changed(self, event):

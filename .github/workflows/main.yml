@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 
 jobs:
-
   # ---------------- WINDOWS ----------------
   build-windows:
     runs-on: windows-latest
@@ -56,7 +55,6 @@ jobs:
       run: |
         python3 -m venv venv --system-site-packages
         . venv/bin/activate
-
         pip install --upgrade pip
         pip install python-docx sqlcipher3 sqlcipher3-binary wxPython requests pyinstaller
 
@@ -69,4 +67,3 @@ jobs:
       with:
         name: drs_wx-debian12
         path: dist/
-```[cite: 1]

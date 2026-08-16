@@ -2,11 +2,11 @@
 
 
 a = Analysis(
-    ['drs_wx.py'],
+    ['main.py'],
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=[],
+    hiddenimports=['check_db', 'config', 'database', 'sql_console', 'ui_dialogs', 'ui_main', 'utils'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

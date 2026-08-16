@@ -6,7 +6,6 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=['check_db', 'config', 'database', 'sql_console', 'ui_dialogs', 'ui_main', 'utils'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

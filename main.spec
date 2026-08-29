@@ -5,6 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
+    datas=[('tabs', 'tabs')],
     datas=[],
     hookspath=[],
     hooksconfig={},

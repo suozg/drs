@@ -1,23 +1,8 @@
-# database.py
 import os
 from sqlcipher3 import dbapi2 as sqlite3 
 import wx
 from utils import get_full_db_path
 import config
-from settings_db import get_databases_list
-
-def connect_to_specific_database(db_path, db_password):
-    """Підключення до довільної зашифрованої бази даних за її шляхом."""
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(f"PRAGMA key = '{db_password}';")
-        cursor.execute("PRAGMA cipher_compatibility = 3;")
-        cursor.execute("PRAGMA temp_store = MEMORY;")
-        return conn
-    except Exception as e:
-        print(f"Помилка підключення до {db_path}: {e}")
-        return None
 
 def check_patch_db():
     """Перевіряє, чи існує файл бази даних."""
@@ -31,15 +16,10 @@ def sqlite_lower(value_):
     """Функція для приведення рядка до нижнього регістру для SQL-запитів."""
     return str(value_).lower()
 
-def connect_to_database(db_password, allow_create=False):
+def connect_to_database(db_password):
     """
     Підключається до зашифрованої бази даних з паролем через sqlcipher3.
     """
-    if not os.path.exists(config.db_path):
-        if not allow_create:
-            print(f"Файл бази даних не знайдено за шляхом: {config.db_path}")
-            return None
-
     conn = None
     try:
         conn = sqlite3.connect(config.db_path)
@@ -61,7 +41,7 @@ def connect_to_database(db_password, allow_create=False):
 
         if not main_table_exists:
             full_db_path, _ = get_full_db_path(config.db_path)
-            wx.MessageBox(f"Створений файл бази даних за адресою {full_db_path}.", "Перший запуск", wx.OK | wx.ICON_ERROR)
+            wx.MessageBox(f"Не знайдено файл бази даних. \nБуде створений новий за адресою {full_db_path}.", "Відсутня база даних", wx.OK | wx.ICON_ERROR)
 
             cursor.execute("""
             CREATE TABLE IF NOT EXISTS documents (
@@ -105,7 +85,7 @@ def connect_to_database(db_password, allow_create=False):
                 cursor.execute("ALTER TABLE documents ADD COLUMN content_hash TEXT;")
                 conn.commit()
             except Exception:
-                pass        
+                pass           
 
         conn.create_function("LOWER", 1, sqlite_lower)
         return conn
@@ -115,39 +95,3 @@ def connect_to_database(db_password, allow_create=False):
         if conn:
             conn.close()
         return None
-
-def populate_databases_choice(choice_ctrl):
-    """Заповнює переданий wx.Choice список активних баз даних"""
-    choice_ctrl.Clear()
-    
-    if not hasattr(config, 'master_password') or not config.master_password:
-        return
-        
-    databases = get_databases_list(config.master_password)
-    for row in databases:
-        db_id, db_name, db_path, db_password, is_active = row
-        if is_active:
-            choice_ctrl.Append(f"{db_name} ({db_path})", clientData=(db_path, db_password))
-    
-    if choice_ctrl.GetCount() > 0:
-        choice_ctrl.SetSelection(0)
-
-def create_new_database(db_path, db_password):
-    """Створює нову базу даних."""
-    old_path = config.db_path
-    try:
-        if os.path.exists(db_path):
-            os.remove(db_path)
-            
-        config.db_path = db_path
-        # Передаємо allow_create=True, щоб обойти перевірку існування файлу
-        conn = connect_to_database(db_password, allow_create=True)
-        
-        if conn:
-            conn.close()
-            return True, ""
-        return False, "Не вдалося ініціювати підключення до нової бази."
-    except Exception as e:
-        return False, str(e)
-    finally:
-        config.db_path = old_path

@@ -1,20 +1,11 @@
-import argparse
+# main.py
 import wx
-from config import frame_title, db_path
-from ui_main import DocumentSearchFrame
+from config import frame_title
+from main_frame import DrsMainFrame
 
 class DocumentSearchApp(wx.App):
     def OnInit(self):
-        global db_path
-        parser_file_db = argparse.ArgumentParser(description='Process some database file.')
-        parser_file_db.add_argument('-c', type=str, default=db_path, help='Path to the database file')
-        args_db = parser_file_db.parse_args()
-        
-        # Оновлюємо шлях у глобальному модулі
-        import config
-        config.db_path = args_db.c
-        
-        frame = DocumentSearchFrame(None, title=frame_title)
+        frame = DrsMainFrame(None, title=frame_title)
         self.SetTopWindow(frame)
         return True
 

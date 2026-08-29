@@ -5,22 +5,6 @@ from datetime import datetime, date, timedelta
 import wx
 from config import filename_date_pattern, path_date_pattern
 
-def populate_databases_choice(choice_ctrl):
-    """Заповнює переданий wx.Choice список активних баз даних"""
-    choice_ctrl.Clear()
-    
-    if not hasattr(config, 'master_password') or not config.master_password:
-        return
-        
-    databases = get_databases_list(config.master_password)
-    for row in databases:
-        db_id, db_name, db_path, db_password, is_active = row
-        if is_active:
-            choice_ctrl.Append(f"{db_name} ({db_path})", clientData=(db_path, db_password))
-    
-    if choice_ctrl.GetCount() > 0:
-        choice_ctrl.SetSelection(0)
-
 def _get_full_db_path(db_path):
     current_directory = os.getcwd()
     full_db_path = os.path.join(current_directory, db_path)
@@ -83,15 +67,6 @@ def get_document_date(filename, root_path):
         final_day = current_date.day
 
     return final_year, final_month, final_day
-
-def normalize_text(text):
-    if not text:
-        return text
-    # Замінюємовсі можливі варіанти апострофів на єдиний стандартний
-    bad_apostrophes = ["`", "´", "‘", "’", "ʼ", "ʻ"]
-    for bad in bad_apostrophes:
-        text = text.replace(bad, "'")
-    return text
 
 def extract_text_libreoffice(filepath):
     try:

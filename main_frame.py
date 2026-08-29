@@ -3,7 +3,7 @@ import wx
 import os
 import config
 from ui_dialogs import PasswordDialog, ConfirmPasswordDialog
-from settings_db import SETTINGS_DB_NAME, init_settings_db, add_database_to_settings
+from settings_db import init_settings_db, add_database_to_settings
 
 # Імпортуємо наші вкладки
 from tabs.tab_search import SearchTab
@@ -61,7 +61,7 @@ class DrsMainFrame(wx.Frame):
         self.notebook.AddPage(self.tab_search, "Пошук")
         self.notebook.AddPage(self.tab_import, "Імпорт")
         self.notebook.AddPage(self.tab_sql, "SQL") 
-        self.notebook.AddPage(self.tab_settings, "Налаштування")   
+        self.notebook.AddPage(self.tab_settings, "Налаштування")    
         self.notebook.AddPage(self.tab_about, "Про")
 
         # Прив'язка подій notebook
@@ -81,10 +81,11 @@ class DrsMainFrame(wx.Frame):
 
     def prompt_for_password(self):
         from settings_db import get_databases_list, add_database_to_settings
+        from database import create_new_database
         import sqlite3
         
         while True:
-            is_first_run = not os.path.exists(SETTINGS_DB_NAME)
+            is_first_run = not os.path.exists(config.SETTINGS_DB_PATH)
             
             if is_first_run:
                 dlg = ConfirmPasswordDialog(self, title="Створення пароля")
@@ -143,10 +144,11 @@ class DrsMainFrame(wx.Frame):
                                 config.db_path = db_path
                                 config.password = db_password
                                 
-                                from database import connect_to_database
-                                conn = connect_to_database(db_password)
-                                if conn:
-                                    conn.close()
+                                # Створюємо файл бази та таблиці фізично
+                                success, error_msg = create_new_database(db_path, db_password)
+                                if not success:
+                                    wx.MessageBox(f"Не вдалося створити базу даних:\n{error_msg}", "Помилка", wx.OK | wx.ICON_ERROR)
+                                    return False
                                 
                                 add_database_to_settings(input_password, db_name, db_path, db_password)
                             else:
@@ -182,7 +184,7 @@ class DrsMainFrame(wx.Frame):
                                     if fd.ShowModal() == wx.ID_CANCEL:
                                         return False
                                     db_path = fd.GetPath()
-                                    if db_path.endswith('.db'):
+                                    if not db_path.endswith('.db'):
                                         db_path += '.db'
                                     db_name = os.path.basename(db_path)
 
@@ -194,10 +196,11 @@ class DrsMainFrame(wx.Frame):
                                     config.db_path = db_path
                                     config.password = db_password
                                     
-                                    from database import connect_to_database
-                                    conn = connect_to_database(db_password)
-                                    if conn:
-                                        conn.close()
+                                    # Створюємо файл бази та таблиці фізично
+                                    success, error_msg = create_new_database(db_path, db_password)
+                                    if not success:
+                                        wx.MessageBox(f"Не вдалося створити базу даних:\n{error_msg}", "Помилка", wx.OK | wx.ICON_ERROR)
+                                        return False
                                         
                                     add_database_to_settings(input_password, db_name, db_path, db_password)
                                 else:
@@ -207,7 +210,6 @@ class DrsMainFrame(wx.Frame):
                                 choice_dlg.Destroy()
                         else:
                             # Якщо бази є у списку — беремо першу активну (або першу у списку) за замовчуванням
-                            # Формат рядка в databases: (id, name, path, password, is_active)
                             db_id, db_name, db_path, db_password, is_active = databases[0]
                             config.db_path = db_path
                             config.password = db_password

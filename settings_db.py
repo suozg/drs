@@ -1,12 +1,11 @@
 # settings_db.py
 import os
 from sqlcipher3 import dbapi2 as sqlite3
-
-SETTINGS_DB_NAME = "settings.db"
+from config import SETTINGS_DB_PATH
 
 def init_settings_db(master_password):
     """Створює або підключається до зашифрованого файлу налаштувань."""
-    conn = sqlite3.connect(SETTINGS_DB_NAME)
+    conn = sqlite3.connect(SETTINGS_DB_PATH)
     cursor = conn.cursor()
     cursor.execute(f"PRAGMA key = '{master_password}';")
     cursor.execute("PRAGMA cipher_compatibility = 3;")
@@ -44,12 +43,12 @@ def verify_database_password(path, password):
 
 def get_databases_list(master_password):
     """Отримує список усіх зареєстрованих баз даних."""
-    if not os.path.exists(SETTINGS_DB_NAME):
+    if not os.path.exists(SETTINGS_DB_PATH):
         return []
     
     conn = None
     try:
-        conn = sqlite3.connect(SETTINGS_DB_NAME)
+        conn = sqlite3.connect(SETTINGS_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(f"PRAGMA key = '{master_password}';")
         cursor.execute("PRAGMA cipher_compatibility = 3;")
@@ -68,7 +67,7 @@ def get_databases_list(master_password):
 
 def add_database_to_settings(master_password, name, path, password):
     """Додає або оновлює базу даних у конфігурації."""
-    conn = sqlite3.connect(SETTINGS_DB_NAME)
+    conn = sqlite3.connect(SETTINGS_DB_PATH)
     cursor = conn.cursor()
     cursor.execute(f"PRAGMA key = '{master_password}';")
     cursor.execute("PRAGMA cipher_compatibility = 3;")
@@ -83,7 +82,7 @@ def add_database_to_settings(master_password, name, path, password):
 
 def remove_database_from_settings(master_password, db_id):
     """Видаляє зареєстровану базу даних за її ID."""
-    conn = sqlite3.connect(SETTINGS_DB_NAME)
+    conn = sqlite3.connect(SETTINGS_DB_PATH)
     cursor = conn.cursor()
     cursor.execute(f"PRAGMA key = '{master_password}';")
     cursor.execute("PRAGMA cipher_compatibility = 3;")

@@ -154,6 +154,10 @@ class SearchTab(wx.Panel):
         self._start_search_thread(formatted_query, query)
 
     def _start_search_thread(self, formatted_query, query):
+        # Оновлюємо стан доступності всіх баз даних перед початком пошуку
+        if hasattr(self.main_frame, 'tab_settings'):
+            self.main_frame.tab_settings.load_databases_into_ui()
+
         self.search_cancel_event.clear()
 
         # Змінюємо саму кнопку "Пошук" на "Стоп"

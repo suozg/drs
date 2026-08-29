@@ -10,7 +10,7 @@ from settings_db import (
     add_database_to_settings, 
     verify_database_password
 )
-from ui_dialogs import PasswordDialog
+from ui_dialogs import PasswordDialog, ConfirmPasswordDialog
 from database import create_new_database
 
 class SettingsTab(wx.Panel):
@@ -127,17 +127,40 @@ class SettingsTab(wx.Panel):
             return
 
         databases = get_databases_list(config.master_password)
+        unavailable_count = 0
         
         for row in databases:
             db_id, name, path, password, is_active = row
+            
+            # Перевіряємо фізичну доступність файлу бази на диску
+            file_exists = os.path.exists(path)
+            
+            if not file_exists:
+                status_text = "Недоступна"
+                unavailable_count += 1
+            else:
+                status_text = "Активна" if is_active else "Вимкнена"
+
             index = self.db_list_ctrl.InsertItem(self.db_list_ctrl.GetItemCount(), name)
             self.db_list_ctrl.SetItem(index, 1, path)
-            self.db_list_ctrl.SetItem(index, 2, "Активна" if is_active else "Вимкнена")
+            self.db_list_ctrl.SetItem(index, 2, status_text)
+            
+            if not file_exists:
+                self.db_list_ctrl.SetItemTextColour(index, wx.Colour(200, 0, 0)) # червоний для недоступних
+                
             self.db_list_ctrl.SetItemData(index, db_id)
 
         # Автоматично обираємо перший рядок, якщо він є
         if self.db_list_ctrl.GetItemCount() > 0:
             self.db_list_ctrl.Select(0)
+
+        # Виводимо статус у головне вікно
+        if hasattr(self.main_frame, 'set_status'):
+            total_db = len(databases)
+            if unavailable_count > 0:
+                self.main_frame.set_status(f"Список оновлено: баз: {total_db}, недоступних файлів: {unavailable_count}")
+            else:
+                self.main_frame.set_status(f"Список оновлено: усі {total_db} баз доступні")
 
     def on_db_selected(self, event):
         index = event.GetIndex()
@@ -163,7 +186,7 @@ class SettingsTab(wx.Panel):
             if hasattr(config, 'master_password'):
                 remove_database_from_settings(config.master_password, db_id)
             if hasattr(self.main_frame, 'set_status'):
-                self.main_frame.set_status("Запис про базу даних збережено") 
+                self.main_frame.set_status(f"Базу даних '{db_name}' видалено зі списку") 
             self.refresh_all_views()
 
     def on_add_database(self, event):
@@ -188,7 +211,7 @@ class SettingsTab(wx.Panel):
                 try:
                     add_database_to_settings(config.master_password, db_name, db_path, db_password)
                     if hasattr(self.main_frame, 'set_status'):
-                        self.main_frame.set_status("Запис про базу даних збережено") 
+                        self.main_frame.set_status(f"Базу даних '{db_name}' успішно додано") 
                     self.refresh_all_views()
                 except Exception as e:
                     wx.MessageBox(f"Помилка: {e}", "Помилка", wx.OK | wx.ICON_ERROR)
@@ -205,9 +228,10 @@ class SettingsTab(wx.Panel):
             
             db_name = os.path.basename(db_path)
 
-            dlg = PasswordDialog(self, f"Введіть пароль для захисту {db_name}:", "Пароль нової бази даних")
+            # Використовуємо правильний клас ConfirmPasswordDialog з ui_dialogs.py
+            dlg = ConfirmPasswordDialog(self, title=f"Пароль нової бази даних: {db_name}")
             if dlg.ShowModal() == wx.ID_OK:
-                db_password = dlg.GetValue().strip()
+                db_password = dlg.GetPassword().strip()
                 dlg.Destroy()
 
                 if not db_password:
@@ -221,10 +245,14 @@ class SettingsTab(wx.Panel):
 
                 try:
                     add_database_to_settings(config.master_password, db_name, db_path, db_password)
+                    if hasattr(self.main_frame, 'set_status'):
+                        self.main_frame.set_status(f"Створено та додано нову базу: {db_name}")
                     self.refresh_all_views()
                     wx.MessageBox(f"Базу даних '{db_name}' успішно створено та додано!", "Успіх", wx.OK | wx.ICON_INFORMATION)
                 except Exception as e:
                     wx.MessageBox(f"Базу створено, але сталася помилка при додаванні до налаштувань: {e}", "Попередження", wx.OK | wx.ICON_WARNING)
+            else:
+                dlg.Destroy()
 
     def refresh_all_views(self):
         self.load_databases_into_ui()
@@ -271,7 +299,7 @@ class SettingsTab(wx.Panel):
     def _perform_master_password_change(self, old_pass, new_pass):
         conn = None
         try:
-            settings_db = getattr(self.main_frame, 'settings_db_path', 'settings.db')
+            settings_db = getattr(self.main_frame, 'settings_db_path', config.SETTINGS_DB_PATH)
             
             conn = sqlite3.connect(settings_db)
             cursor = conn.cursor()
@@ -315,9 +343,8 @@ class SettingsTab(wx.Panel):
             conn.commit()
             conn.close()
             conn = None
-            
             master_pass = getattr(self.main_frame, 'master_password', None)
-            settings_db = getattr(self.main_frame, 'settings_db_path', 'settings.db')
+            settings_db = getattr(self.main_frame, 'settings_db_path', config.SETTINGS_DB_PATH)
             
             if master_pass:
                 s_conn = sqlite3.connect(settings_db)
@@ -335,7 +362,7 @@ class SettingsTab(wx.Panel):
             
         except sqlite3.DatabaseError as e:
             if "file is encrypted or is not a database" in str(e) or "not an error" in str(e):
-                wx.CallAfter(self.log_password_progress, "Помилка: невірний старий пароль бази даних.")
+                wx.CallAfter(self.log_password_progress, "Помилка: невірний старий пароль пароля бази даних.")
             else:
                 wx.CallAfter(self.log_password_progress, f"Помилка бази даних при зміні пароля: {e}")
         except Exception as e:

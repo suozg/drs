@@ -1,7 +1,6 @@
 # tabs/tab_about.py
 import wx
 
-# Константи для ігрових об'єктів
 FLOOR = 0
 WALL = 1
 PLAYER = 2

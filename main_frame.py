@@ -40,16 +40,14 @@ class DrsMainFrame(wx.Frame):
         self.notebook = wx.Notebook(panel)
         main_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 5)
         
-        # Footer
-        footer_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.file_label = wx.StaticText(panel, label="Готово")
-        font = self.file_label.GetFont()
-        font.SetPointSize(8) 
-        self.file_label.SetFont(font)
-        footer_sizer.Add(self.file_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.BOTTOM, 2)
-        main_sizer.Add(footer_sizer, 0, wx.EXPAND | wx.LEFT, 5)
-        
         panel.SetSizer(main_sizer)
+
+        # Створюємо повноцінний статус-бар на 2 поля у нижній частині вікна
+        self.statusbar = self.CreateStatusBar(2)
+        # -1 означає, що ліве поле займає весь доступний простір, а праве фіксоване (240 пікселів для копірайту)
+        self.statusbar.SetStatusWidths([-1, 300])
+        self.statusbar.SetStatusText("Готово", 0)
+        self.statusbar.SetStatusText("(c) 2026, Холодов О.В., github.com/suozg", 1)
 
         # --- Створюємо та додаємо вкладки (передаємо self як головне вікно) ---
         self.tab_search = SearchTab(self.notebook, self)
@@ -68,9 +66,9 @@ class DrsMainFrame(wx.Frame):
         self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGING, self.on_notebook_page_changing)
 
     def set_status(self, text):
-        """Оновлює текст у нижньому рядку сповіщень"""
-        if hasattr(self, 'file_label'):
-            wx.CallAfter(self.file_label.SetLabel, text)
+        """Оновлює текст у лівій частині нижнього рядка сповіщень"""
+        if hasattr(self, 'statusbar'):
+            wx.CallAfter(self.statusbar.SetStatusText, text, 0)
 
     def on_notebook_page_changing(self, event):
         if getattr(self, 'is_scanning_active', False):
@@ -144,7 +142,6 @@ class DrsMainFrame(wx.Frame):
                                 config.db_path = db_path
                                 config.password = db_password
                                 
-                                # Створюємо файл бази та таблиці фізично
                                 success, error_msg = create_new_database(db_path, db_password)
                                 if not success:
                                     wx.MessageBox(f"Не вдалося створити базу даних:\n{error_msg}", "Помилка", wx.OK | wx.ICON_ERROR)
@@ -164,11 +161,9 @@ class DrsMainFrame(wx.Frame):
                 else:
                     config.master_password = input_password
                     try:
-                        # Отримуємо список підключених баз із settings.db 
                         databases = get_databases_list(input_password)
                         
                         if not databases:
-                            # Якщо список баз у settings.db взагалі порожній
                             choice_dlg = wx.MessageDialog(
                                 self, 
                                 "У налаштуваннях немає підключених баз даних. Створити нову чи підключити існуючу?", 
@@ -196,7 +191,6 @@ class DrsMainFrame(wx.Frame):
                                     config.db_path = db_path
                                     config.password = db_password
                                     
-                                    # Створюємо файл бази та таблиці фізично
                                     success, error_msg = create_new_database(db_path, db_password)
                                     if not success:
                                         wx.MessageBox(f"Не вдалося створити базу даних:\n{error_msg}", "Помилка", wx.OK | wx.ICON_ERROR)
@@ -209,7 +203,6 @@ class DrsMainFrame(wx.Frame):
                             else:
                                 choice_dlg.Destroy()
                         else:
-                            # Якщо бази є у списку — беремо першу активну (або першу у списку) за замовчуванням
                             db_id, db_name, db_path, db_password, is_active = databases[0]
                             config.db_path = db_path
                             config.password = db_password

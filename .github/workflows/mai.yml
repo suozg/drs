@@ -20,6 +20,11 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         pip install python-docx sqlcipher3-wheels wxPython requests pyinstaller
         
+    - name: Clean previous builds
+      run: |
+        if (Test-Path dist) { Remove-Item -Recurse -Force dist }
+        if (Test-Path build) { Remove-Item -Recurse -Force build }
+
     - name: Build exe
       run: pyinstaller --clean main.spec
 
@@ -58,6 +63,10 @@ jobs:
         pip install --upgrade pip
         pip install python-docx sqlcipher3-wheels wxPython requests pyinstaller
         
+    - name: Clean previous builds
+      run: |
+        rm -rf build dist
+
     - name: Build binary
       run: |
         . venv/bin/activate

@@ -175,7 +175,7 @@ pyinstaller main.spec
 
 Проєкт поширюється за ліцензією **GNU General Public License v2.0 або новішої версії**. Повний текст доступний у файлі [LICENSE.txt](LICENSE.txt).
 
-Copyright © 2023–2025 О��ексій Холодов.
+Copyright © 2023–2025 Олексій Холодов.
 
 ## Автор
 
